@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alone Management - Pro Finance V2</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Outfit', 'sans-serif'] },
+                    colors: {
+                        dark: '#0b0e14',
+                        card: '#151b23',
+                        primary: '#3b82f6',
+                        secondary: '#6366f1',
+                        success: '#10b981',
+                        danger: '#ef4444',
+                        warning: '#f59e0b',
+                        info: '#06b6d4',
+                        textMain: '#e2e8f0',
+                        textMuted: '#94a3b8'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #0b0e14; color: #e2e8f0; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #151b23; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        
+        .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .nav-item.active { background: linear-gradient(90deg, rgba(59,130,246,0.15) 0%, transparent 100%); border-left: 3px solid #3b82f6; color: #60a5fa; }
+        .glass-panel { background: rgba(21, 27, 35, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
+
+        .toast { transform: translateX(100%); transition: transform 0.3s ease-in-out; }
+        .toast.show { transform: translateX(0); }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden selection:bg-primary selection:text-white">
+
+    <div id="login-screen" class="fixed inset-0 z-50 bg-dark flex flex-col items-center justify-center p-4">
+        <div class="glass-panel p-8 rounded-2xl shadow-2xl w-full max-w-md border border-slate-800 text-center fade-in">
+            <div class="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-xl mx-auto flex items-center justify-center text-white text-3xl font-bold mb-6 shadow-lg shadow-primary/30">A</div>
+            <h1 class="text-3xl font-bold mb-2">Welcome Back</h1>
+            <p class="text-textMuted mb-8">Secure Personal Finance Management</p>
+            
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <input type="password" id="login-pin" placeholder="Enter PIN" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-center text-xl tracking-widest focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition" maxlength="4">
+                </div>
+                <button type="submit" class="w-full bg-primary hover:bg-blue-600 text-white font-semibold py-3 rounded-xl transition shadow-lg shadow-primary/20">
+                    Unlock Dashboard
+                </button>
+                <p id="login-error" class="text-danger text-sm hidden mt-2"><i class="fa-solid fa-circle-exclamation"></i> Invalid PIN. Try again.</p>
+                <p class="text-xs text-slate-600 mt-4">Default PIN is 1234</p>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast-container" class="fixed top-5 right-5 z-[60] flex flex-col gap-2"></div>
+
+    <div id="app-container" class="hidden flex-1 flex h-screen overflow-hidden">
+        
+        <aside class="w-64 bg-card hidden md:flex flex-col border-r border-slate-800/50">
+            <div class="p-6 flex items-center gap-3">
+                <div class="w-8 h-8 bg-gradient-to-r from-primary to-secondary rounded-lg flex items-center justify-center text-white font-bold shadow-lg">A</div>
+                <h1 class="text-lg font-bold tracking-wide">Alone<span class="text-primary font-light">Mgt</span></h1>
+            </div>
+
+            <nav class="flex-1 px-3 space-y-1 mt-4">
+                <button onclick="nav('dashboard')" id="nav-dashboard" class="nav-item active w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800/50 transition-all text-sm font-medium">
+                    <i class="fa-solid fa-grid-2 w-5 text-center"></i> Dashboard
+                </button>
+                <button onclick="nav('wallet')" id="nav-wallet" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800/50 transition-all text-sm font-medium">
+                    <i class="fa-solid fa-wallet w-5 text-center"></i> Transactions
+                </button>
+                <button onclick="nav('trips')" id="nav-trips" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800/50 transition-all text-sm font-medium">
+                    <i class="fa-solid fa-plane-departure w-5 text-center"></i> Trip Planner
+                </button>
+                <button onclick="nav('savings')" id="nav-savings" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800/50 transition-all text-sm font-medium">
+                    <i class="fa-solid fa-piggy-bank w-5 text-center"></i> Savings Goals
+                </button>
+                <button onclick="nav('reports')" id="nav-reports" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800/50 transition-all text-sm font-medium">
+                    <i class="fa-solid fa-chart-pie w-5 text-center"></i> Analytics
+                </button>
+                <div class="pt-4 mt-4 border-t border-slate-800">
+                    <button onclick="nav('settings')" id="nav-settings" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800/50 transition-all text-sm font-medium">
+                        <i class="fa-solid fa-gear w-5 text-center"></i> Settings
+                    </button>
+                </div>
+            </nav>
+
+            <div class="p-4">
+                <button onclick="logout()" class="w-full flex items-center justify-center gap-2 text-danger hover:bg-danger/10 py-2 rounded-lg transition text-xs font-bold uppercase tracking-wider">
+                    <i class="fa-solid fa-power-off"></i> Lock App
+                </button>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col h-screen overflow-hidden bg-dark relative">
+            
+            <header class="md:hidden bg-card/80 backdrop-blur-md p-4 flex justify-between items-center border-b border-slate-800 sticky top-0 z-20">
+                <span class="font-bold">Alone<span class="text-primary">Mgt</span></span>
+                <button onclick="toggleMobileMenu()" class="text-slate-200"><i class="fa-solid fa-bars text-xl"></i></button>
+            </header>
+
+            <div id="mobile-menu" class="fixed inset-0 bg-dark/95 z-50 hidden flex-col justify-center items-center space-y-8 md:hidden fade-in">
+                <button onclick="nav('dashboard'); toggleMobileMenu()" class="text-xl font-medium">Dashboard</button>
+                <button onclick="nav('wallet'); toggleMobileMenu()" class="text-xl font-medium">Transactions</button>
+                <button onclick="nav('trips'); toggleMobileMenu()" class="text-xl font-medium">Trips</button>
+                <button onclick="nav('savings'); toggleMobileMenu()" class="text-xl font-medium">Savings</button>
+                <button onclick="nav('reports'); toggleMobileMenu()" class="text-xl font-medium">Reports</button>
+                <button onclick="nav('settings'); toggleMobileMenu()" class="text-xl font-medium">Settings</button>
+                <button onclick="toggleMobileMenu()" class="text-danger mt-8"><i class="fa-solid fa-xmark"></i> Close</button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth">
+                
+                <section id="dashboard" class="fade-in block space-y-6 max-w-6xl mx-auto">
+                    <div class="flex flex-col md:flex-row justify-between md:items-center gap-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-white">Dashboard</h2>
+                            <p class="text-textMuted text-sm">Overview of your financial health.</p>
+                        </div>
+                        <div class="flex gap-3">
+                            <button onclick="openModal('transaction')" class="bg-primary hover:bg-blue-600 text-white px-5 py-2 rounded-lg shadow-lg shadow-primary/20 transition text-sm font-medium flex items-center gap-2">
+                                <i class="fa-solid fa-plus"></i> New Transaction
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl border border-slate-700/50 shadow-lg relative overflow-hidden">
+                            <div class="absolute right-0 top-0 w-32 h-32 bg-primary/10 rounded-bl-full -mr-6 -mt-6"></div>
+                            <p class="text-textMuted text-sm font-medium mb-1">Total Balance</p>
+                            <h3 class="text-4xl font-bold text-white tracking-tight mt-2" id="dash-balance">0.00</h3>
+                            <div class="mt-4 flex items-center gap-2 text-xs text-primary bg-primary/10 w-fit px-2 py-1 rounded">
+                                <i class="fa-solid fa-wallet"></i> Cash In Hand
+                            </div>
+                        </div>
+                        
+                        <div class="bg-card p-6 rounded-2xl border border-slate-800 shadow-sm">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-10 h-10 rounded-full bg-success/10 text-success flex items-center justify-center"><i class="fa-solid fa-arrow-down-long"></i></div>
+                                <div>
+                                    <p class="text-textMuted text-xs uppercase tracking-wider font-bold">Income</p>
+                                    <h3 class="text-2xl font-bold text-success" id="dash-income">0.00</h3>
+                                </div>
+                            </div>
+                            <div class="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
+                                <div class="bg-success h-full" style="width: 100%"></div> </div>
+                            <p class="text-xs text-textMuted mt-2">Total Accumulated</p>
+                        </div>
+
+                        <div class="bg-card p-6 rounded-2xl border border-slate-800 shadow-sm">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-10 h-10 rounded-full bg-danger/10 text-danger flex items-center justify-center"><i class="fa-solid fa-arrow-up-long"></i></div>
+                                <div>
+                                    <p class="text-textMuted text-xs uppercase tracking-wider font-bold">Expenses</p>
+                                    <h3 class="text-2xl font-bold text-danger" id="dash-expense">0.00</h3>
+                                </div>
+                            </div>
+                            <div class="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
+                                <div class="bg-danger h-full" id="dash-expense-bar" style="width: 0%"></div>
+                            </div>
+                            <p class="text-xs text-textMuted mt-2" id="dash-budget-status">0% of Budget used</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-card rounded-2xl border border-slate-800 p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-lg font-bold text-white">Recent Activity</h3>
+                            <button onclick="nav('wallet')" class="text-sm text-primary hover:text-blue-400">View All</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead class="text-xs text-textMuted uppercase bg-slate-800/50 rounded-lg">
+                                    <tr>
+                                        <th class="py-3 px-4 rounded-l-lg">Date</th>
+                                        <th class="py-3 px-4">Category</th>
+                                        <th class="py-3 px-4">Note</th>
+                                        <th class="py-3 px-4 text-right rounded-r-lg">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recent-list" class="text-sm divide-y divide-slate-800">
+                                    </tbody>
+                            </table>
+                            <div id="dash-empty" class="hidden text-center py-8 text-textMuted text-sm">No recent transactions found.</div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="wallet" class="fade-in hidden space-y-6 max-w-6xl mx-auto">
+                    <h2 class="text-2xl font-bold text-white">Transaction History</h2>
+                    <div class="bg-card p-6 rounded-2xl border border-slate-800">
+                        <div class="flex flex-col md:flex-row justify-between mb-4 gap-3">
+                            <input type="text" id="search-tx" onkeyup="renderTransactions()" placeholder="Search by note or category..." class="bg-dark border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:border-primary focus:outline-none w-full md:w-64">
+                            <button onclick="openModal('transaction')" class="bg-primary/20 text-primary hover:bg-primary/30 px-4 py-2 rounded-lg text-sm font-medium">Add New</button>
+                        </div>
+                        <ul id="full-list" class="space-y-3"></ul>
+                    </div>
+                </section>
+
+                <section id="trips" class="fade-in hidden space-y-6 max-w-6xl mx-auto">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-bold text-white">Trip & Event Planner</h2>
+                            <p class="text-textMuted text-sm">Manage separate budgets for your journeys.</p>
+                        </div>
+                        <button onclick="openModal('trip')" class="bg-secondary hover:bg-indigo-600 text-white px-5 py-2 rounded-lg shadow-lg shadow-secondary/20 transition text-sm font-medium">
+                            <i class="fa-solid fa-plus mr-2"></i> Create Trip
+                        </button>
+                    </div>
+                    <div id="trips-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                    <div id="no-trips" class="hidden text-center py-12 text-slate-500 border border-dashed border-slate-700 rounded-2xl">
+                        <i class="fa-solid fa-map-location-dot text-4xl mb-3 opacity-50"></i>
+                        <p>No active trips. Plan your next adventure!</p>
+                    </div>
+                </section>
+
+                <section id="savings" class="fade-in hidden space-y-6 max-w-6xl mx-auto">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-bold text-white">Savings Goals</h2>
+                            <p class="text-textMuted text-sm">Save for your future dreams.</p>
+                        </div>
+                        <button onclick="openModal('saving')" class="bg-info hover:bg-cyan-600 text-white px-5 py-2 rounded-lg shadow-lg shadow-info/20 transition text-sm font-medium">
+                            <i class="fa-solid fa-plus mr-2"></i> New Goal
+                        </button>
+                    </div>
+                    <div id="savings-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                    <div id="no-savings" class="hidden text-center py-12 text-slate-500 border border-dashed border-slate-700 rounded-2xl">
+                        <i class="fa-solid fa-piggy-bank text-4xl mb-3 opacity-50"></i>
+                        <p>No savings goals. Start saving today!</p>
+                    </div>
+                </section>
+
+                <section id="reports" class="fade-in hidden space-y-6 max-w-6xl mx-auto">
+                    <div class="flex flex-col md:flex-row justify-between items-end gap-4 border-b border-slate-800 pb-4">
+                        <h2 class="text-2xl font-bold text-white">Financial Analytics</h2>
+                        <div class="flex gap-2">
+                            <select id="report-range" onchange="updateReports()" class="bg-card border border-slate-700 text-white text-sm rounded-lg px-3 py-2 focus:outline-none">
+                                <option value="this_month">This Month</option>
+                                <option value="last_month">Last Month</option>
+                                <option value="last_7">Last 7 Days</option>
+                                <option value="last_3m">Last 3 Months</option>
+                                <option value="all_time">All Time</option>
+                            </select>
+                            <button onclick="updateReports()" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm"><i class="fa-solid fa-rotate"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-card p-6 rounded-2xl border border-slate-800">
+                            <h4 class="font-bold text-slate-300 mb-4">Spending by Category</h4>
+                            <div class="h-64 flex justify-center">
+                                <canvas id="chartPie"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-card p-6 rounded-2xl border border-slate-800">
+                            <h4 class="font-bold text-slate-300 mb-4">Income vs Expense</h4>
+                            <div class="h-64">
+                                <canvas id="chartBar"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="settings" class="fade-in hidden space-y-6 max-w-2xl mx-auto">
+                    <h2 class="text-2xl font-bold text-white">Settings</h2>
+                    
+                    <div class="bg-card p-6 rounded-2xl border border-slate-800 space-y-6">
+                        <div>
+                            <label class="block text-sm text-textMuted mb-2">Currency Symbol</label>
+                            <select id="set-currency" class="w-full bg-dark border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none">
+                                <option value="LKR">LKR (Sri Lankan Rupee)</option>
+                                <option value="USD">USD (US Dollar)</option>
+                                <option value="EUR">EUR (Euro)</option>
+                                <option value="GBP">GBP (British Pound)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm text-textMuted mb-2">Monthly Budget Limit</label>
+                            <input type="number" id="set-budget" class="w-full bg-dark border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none">
+                        </div>
+                    </div>
+
+                    <div class="bg-card p-6 rounded-2xl border border-slate-800 space-y-4">
+                        <h3 class="text-lg font-bold text-white border-b border-slate-800 pb-2">Security</h3>
+                        <form id="form-change-pin" class="space-y-4">
+                            <div>
+                                <label class="block text-xs text-textMuted mb-1">Current PIN</label>
+                                <input type="password" id="pin-current" placeholder="Enter current PIN" class="w-full bg-dark border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-primary focus:outline-none" maxlength="4">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs text-textMuted mb-1">New PIN</label>
+                                    <input type="password" id="pin-new" placeholder="4 Digits" class="w-full bg-dark border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-primary focus:outline-none" maxlength="4">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-textMuted mb-1">Confirm New PIN</label>
+                                    <input type="password" id="pin-confirm" placeholder="Repeat" class="w-full bg-dark border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-primary focus:outline-none" maxlength="4">
+                                </div>
+                            </div>
+                            <button type="submit" class="bg-slate-700 hover:bg-primary text-white px-4 py-2 rounded-lg text-sm transition">Update PIN</button>
+                        </form>
+                    </div>
+
+                    <div class="bg-card p-6 rounded-2xl border border-slate-800">
+                        <h4 class="text-white font-bold mb-4">Data Management</h4>
+                        <div class="space-y-4">
+                            <div class="flex flex-wrap gap-3">
+                                <button onclick="exportData()" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm"><i class="fa-solid fa-download"></i> Export CSV</button>
+                                <button onclick="exportJSON()" class="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/20 px-4 py-2 rounded-lg text-sm"><i class="fa-solid fa-file-export"></i> Backup (JSON)</button>
+                                <button onclick="clearData()" class="bg-danger/10 hover:bg-danger/20 text-danger border border-danger/20 px-4 py-2 rounded-lg text-sm">Reset All Data</button>
+                            </div>
+                            
+                            <div class="border-t border-slate-800 pt-4">
+                                <label class="block text-xs text-textMuted mb-2">Restore Backup (JSON File)</label>
+                                <div class="flex gap-2">
+                                    <input type="file" id="import-file" accept=".json" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-white hover:file:bg-slate-700">
+                                    <button onclick="importData()" class="bg-success/20 hover:bg-success/30 text-success px-4 py-2 rounded-lg text-xs font-bold uppercase">Import</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <div id="modal-transaction" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-card w-full max-w-md rounded-2xl border border-slate-700 shadow-2xl p-6 fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-white">Add Transaction</h3>
+                <button onclick="closeModal('transaction')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <form id="form-trans" class="space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="t-type" value="expense" checked class="peer hidden">
+                        <div class="py-2 text-center rounded-lg border border-slate-600 text-slate-400 peer-checked:bg-danger peer-checked:text-white peer-checked:border-danger transition">Expense</div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="t-type" value="income" class="peer hidden">
+                        <div class="py-2 text-center rounded-lg border border-slate-600 text-slate-400 peer-checked:bg-success peer-checked:text-white peer-checked:border-success transition">Income</div>
+                    </label>
+                </div>
+                
+                <div>
+                    <label class="block text-xs text-textMuted mb-1">Link to Goal/Trip (Optional)</label>
+                    <select id="t-trip-link" class="w-full bg-dark border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:border-primary focus:outline-none">
+                        <option value="">-- Personal Wallet --</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-textMuted mb-1">Amount</label>
+                    <input type="number" id="t-amount" step="0.01" required class="w-full bg-dark border border-slate-600 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none text-lg font-bold">
+                </div>
+                <div>
+                    <label class="block text-xs text-textMuted mb-1">Category</label>
+                    <select id="t-category" class="w-full bg-dark border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:border-primary focus:outline-none">
+                        </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-textMuted mb-1">Note</label>
+                    <input type="text" id="t-note" placeholder="Short description" class="w-full bg-dark border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:border-primary focus:outline-none">
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="t-recurring" class="w-4 h-4 rounded bg-dark border-slate-600 focus:ring-primary">
+                    <label for="t-recurring" class="text-xs text-textMuted">Repeat Monthly (Recurring Bill)</label>
+                </div>
+                <button type="submit" class="w-full bg-primary hover:bg-blue-600 text-white py-3 rounded-lg font-bold mt-2 shadow-lg shadow-primary/20">Save Transaction</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-trip" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-card w-full max-w-md rounded-2xl border border-slate-700 shadow-2xl p-6 fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-white">Create New Trip</h3>
+                <button onclick="closeModal('trip')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <form id="form-trip" class="space-y-4">
+                <div>
+                    <label class="block text-xs text-textMuted mb-1">Trip Name</label>
+                    <input type="text" id="trip-name" placeholder="e.g. Trip to Ella" required class="w-full bg-dark border border-slate-600 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs text-textMuted mb-1">Budget Allocation</label>
+                    <input type="number" id="trip-budget" placeholder="50000" required class="w-full bg-dark border border-slate-600 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none font-bold">
+                </div>
+                <button type="submit" class="w-full bg-secondary hover:bg-indigo-600 text-white py-3 rounded-lg font-bold mt-2">Start Planning</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-saving" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-card w-full max-w-md rounded-2xl border border-slate-700 shadow-2xl p-6 fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-white">New Savings Goal</h3>
+                <button onclick="closeModal('saving')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <form id="form-saving" class="space-y-4">
+                <div>
+                    <label class="block text-xs text-textMuted mb-1">Goal Name</label>
+                    <input type="text" id="save-name" placeholder="e.g. New Laptop" required class="w-full bg-dark border border-slate-600 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs text-textMuted mb-1">Target Amount</label>
+                    <input type="number" id="save-target" placeholder="200000" required class="w-full bg-dark border border-slate-600 rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none font-bold">
+                </div>
+                <button type="submit" class="w-full bg-info hover:bg-cyan-600 text-white py-3 rounded-lg font-bold mt-2">Create Goal</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA STRUCTURE & MIGRATION ---
+        const defaultCategories = ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Salary', 'Health', 'Education', 'Other'];
+        
+        const defaultData = {
+            transactions: [],
+            trips: [], 
+            savings: [], // New
+            categories: defaultCategories, // New
+            settings: {
+                currency: 'LKR',
+                budget: 50000,
+                pin: btoa('1234') // Encoded Default
+            }
+        };
+
+        // Load data or set default
+        let appData = JSON.parse(localStorage.getItem('aloneMgtProV2')) || defaultData;
+
+        // Migration for old versions
+        if(!appData.categories) appData.categories = defaultCategories;
+        if(!appData.savings) appData.savings = [];
+        
+        // Check if PIN is old plaintext format (length 4 and number)
+        if(appData.settings.pin.length === 4 && !isNaN(appData.settings.pin)) {
+            appData.settings.pin = btoa(appData.settings.pin);
+            localStorage.setItem('aloneMgtProV2', JSON.stringify(appData));
+        }
+
+        // --- AUTHENTICATION ---
+        const loginScreen = document.getElementById('login-screen');
+        const appContainer = document.getElementById('app-container');
+
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const input = document.getElementById('login-pin').value;
+            // Check Encoded PIN
+            if(btoa(input) === appData.settings.pin) {
+                loginScreen.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                appContainer.classList.add('fade-in');
+                initApp();
+            } else {
+                const err = document.getElementById('login-error');
+                err.classList.remove('hidden');
+                err.classList.add('fade-in');
+                document.getElementById('login-pin').value = '';
+            }
+        });
+
+        function logout() {
+            location.reload();
+        }
+
+        // --- NAVIGATION ---
+        function nav(sectionId) {
+            document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+            const target = document.getElementById(sectionId);
+            target.classList.remove('hidden');
+            target.classList.add('fade-in');
+            
+            document.getElementById('mobile-menu').classList.add('hidden');
+            document.getElementById('mobile-menu').classList.remove('flex');
+
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            const navBtn = document.getElementById(`nav-${sectionId}`);
+            if(navBtn) navBtn.classList.add('active');
+
+            if(sectionId === 'reports') updateReports();
+            if(sectionId === 'wallet') renderTransactions();
+            if(sectionId === 'savings') renderSavings();
+            if(sectionId === 'trips') renderTrips();
+        }
+
+        function toggleMobileMenu() {
+            const m = document.getElementById('mobile-menu');
+            if(m.classList.contains('hidden')) {
+                m.classList.remove('hidden');
+                m.classList.add('flex');
+            } else {
+                m.classList.add('hidden');
+                m.classList.remove('flex');
+            }
+        }
+
+        // --- CORE LOGIC ---
+
+        function initApp() {
+            document.getElementById('set-currency').value = appData.settings.currency;
+            document.getElementById('set-budget').value = appData.settings.budget;
+            
+            renderCategories();
+            updateUI();
+            checkRecurringAlerts();
+        }
+
+        function saveData() {
+            localStorage.setItem('aloneMgtProV2', JSON.stringify(appData));
+            updateUI();
+        }
+
+        function formatMoney(amount) {
+            return new Intl.NumberFormat('en-US', { 
+                style: 'currency', 
+                currency: appData.settings.currency 
+            }).format(amount);
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            let color = type === 'success' ? 'bg-success' : (type === 'error' ? 'bg-danger' : 'bg-primary');
+            let icon = type === 'success' ? 'fa-check' : (type === 'error' ? 'fa-circle-exclamation' : 'fa-info-circle');
+            toast.className = `${color} text-white px-6 py-3 rounded-lg shadow-xl flex items-center gap-3 min-w-[200px] toast`;
+            toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span class="font-medium text-sm">${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
+        // Dynamic Categories
+        function renderCategories() {
+            const select = document.getElementById('t-category');
+            select.innerHTML = '';
+            appData.categories.forEach(cat => {
+                select.innerHTML += `<option value="${cat}">${cat}</option>`;
+            });
+            select.innerHTML += `<option value="NEW_CAT" class="font-bold text-primary">+ Custom Category</option>`;
+        }
+
+        document.getElementById('t-category').addEventListener('change', (e) => {
+            if(e.target.value === 'NEW_CAT') {
+                const newCat = prompt("Enter new category name:");
+                if(newCat && newCat.trim() !== "") {
+                    appData.categories.push(newCat);
+                    saveData();
+                    renderCategories();
+                    e.target.value = newCat;
+                } else {
+                    e.target.value = appData.categories[0];
+                }
+            }
+        });
+
+        // Recurring Check
+        function checkRecurringAlerts() {
+            const recurring = appData.transactions.filter(t => t.isRecurring);
+            if(recurring.length > 0) {
+                const now = new Date();
+                const thisMonthRecur = recurring.filter(t => {
+                    const d = new Date(t.date);
+                    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                });
+                // Logic: If recurring exists but not logged this month (Simple Alert)
+                // This is a basic implementation.
+            }
+        }
+
+        function updateUI() {
+            let totalIncome = 0;
+            let totalExpense = 0;
+
+            appData.transactions.forEach(t => {
+                if(t.type === 'income') totalIncome += parseFloat(t.amount);
+                if(t.type === 'expense') totalExpense += parseFloat(t.amount);
+            });
+
+            const balance = totalIncome - totalExpense;
+            
+            document.getElementById('dash-balance').innerText = formatMoney(balance);
+            document.getElementById('dash-income').innerText = formatMoney(totalIncome);
+            document.getElementById('dash-expense').innerText = formatMoney(totalExpense);
+
+            const budgetLimit = appData.settings.budget;
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+
+            const monthExpense = appData.transactions.reduce((acc, t) => {
+                const d = new Date(t.date);
+                if(t.type === 'expense' && d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+                    return acc + parseFloat(t.amount);
+                }
+                return acc;
+            }, 0);
+
+            const budgetPct = (monthExpense / budgetLimit) * 100;
+            const bar = document.getElementById('dash-expense-bar');
+            bar.style.width = `${Math.min(budgetPct, 100)}%`;
+            document.getElementById('dash-budget-status').innerText = `${Math.round(budgetPct)}% of Monthly Budget (${formatMoney(budgetLimit)})`;
+            bar.className = 'h-full transition-all duration-500 ' + (budgetPct > 90 ? 'bg-danger' : (budgetPct > 70 ? 'bg-warning' : 'bg-primary'));
+
+            renderTransactions();
+            renderTrips();
+            renderSavings();
+        }
+
+        // --- TRANSACTIONS ---
+        function renderTransactions() {
+            const listRecent = document.getElementById('recent-list');
+            const listFull = document.getElementById('full-list');
+            const searchVal = document.getElementById('search-tx').value.toLowerCase();
+            const tripSelect = document.getElementById('t-trip-link');
+            
+            listRecent.innerHTML = '';
+            listFull.innerHTML = '';
+            
+            tripSelect.innerHTML = '<option value="">-- Personal Wallet --</option>';
+            appData.trips.forEach(trip => { tripSelect.innerHTML += `<option value="trip-${trip.id}">Trip: ${trip.name}</option>`; });
+            appData.savings.forEach(sav => { tripSelect.innerHTML += `<option value="sav-${sav.id}">Save: ${sav.name}</option>`; });
+
+            const sorted = [...appData.transactions].sort((a,b) => new Date(b.date) - new Date(a.date));
+            const filtered = sorted.filter(t => 
+                t.note.toLowerCase().includes(searchVal) || 
+                t.category.toLowerCase().includes(searchVal)
+            );
+
+            if(filtered.length === 0) {
+                document.getElementById('dash-empty').classList.remove('hidden');
+                listFull.innerHTML = '<div class="text-center text-slate-500 py-4">No transactions found.</div>';
+            } else {
+                document.getElementById('dash-empty').classList.add('hidden');
+            }
+
+            filtered.forEach((t, i) => {
+                const isInc = t.type === 'income';
+                const dateStr = new Date(t.date).toLocaleDateString();
+                
+                let linkTag = '';
+                if(t.tripId) {
+                    const name = appData.trips.find(tr => tr.id == t.tripId)?.name || 'Unknown Trip';
+                    linkTag = `<span class="bg-secondary/20 text-secondary text-[10px] px-1.5 py-0.5 rounded ml-2"><i class="fa-solid fa-plane"></i> ${name}</span>`;
+                } else if (t.saveId) {
+                    const name = appData.savings.find(s => s.id == t.saveId)?.name || 'Unknown Goal';
+                    linkTag = `<span class="bg-info/20 text-info text-[10px] px-1.5 py-0.5 rounded ml-2"><i class="fa-solid fa-piggy-bank"></i> ${name}</span>`;
+                }
+
+                if(i < 5) {
+                    listRecent.innerHTML += `
+                        <tr class="hover:bg-slate-800/50 transition border-b border-slate-800 last:border-0">
+                            <td class="py-3 px-4 text-slate-400 text-xs">${dateStr}</td>
+                            <td class="py-3 px-4"><span class="px-2 py-1 rounded text-xs font-semibold ${isInc ? 'bg-success/10 text-success' : 'bg-slate-700 text-slate-300'}">${t.category}</span>${linkTag}</td>
+                            <td class="py-3 px-4 text-slate-300 truncate max-w-[150px]">${t.note}</td>
+                            <td class="py-3 px-4 text-right font-bold ${isInc ? 'text-success' : 'text-danger'}">${isInc ? '+' : '-'} ${formatMoney(t.amount)}</td>
+                        </tr>
+                    `;
+                }
+
+                listFull.innerHTML += `
+                    <li class="bg-dark p-4 rounded-xl border border-slate-700 flex justify-between items-center group hover:border-slate-500 transition">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center ${isInc ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}">
+                                <i class="fa-solid ${isInc ? 'fa-arrow-down' : 'fa-arrow-up'}"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center flex-wrap gap-2">
+                                    <p class="font-bold text-slate-200">${t.category}</p>
+                                    ${linkTag}
+                                    ${t.isRecurring ? '<span class="text-[10px] bg-slate-700 text-slate-300 px-1 rounded"><i class="fa-solid fa-arrows-rotate"></i> Recurring</span>' : ''}
+                                </div>
+                                <p class="text-xs text-slate-500">${dateStr} • ${t.note}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-bold ${isInc ? 'text-success' : 'text-white'}">${isInc ? '+' : '-'} ${formatMoney(t.amount)}</p>
+                            <button onclick="deleteTrans(${t.id})" class="text-xs text-danger opacity-60 hover:opacity-100 transition mt-1"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </li>
+                `;
+            });
+        }
+
+        // --- TRIPS & SAVINGS ---
+        function renderTrips() {
+            const grid = document.getElementById('trips-grid');
+            grid.innerHTML = '';
+            
+            if(appData.trips.length === 0) {
+                document.getElementById('no-trips').classList.remove('hidden');
+            } else {
+                document.getElementById('no-trips').classList.add('hidden');
+                appData.trips.forEach(trip => {
+                    const spent = appData.transactions.filter(t => t.tripId == trip.id && t.type === 'expense').reduce((acc, t) => acc + parseFloat(t.amount), 0);
+                    const remaining = trip.budget - spent;
+                    const progress = (spent / trip.budget) * 100;
+                    let colorClass = progress > 90 ? 'bg-danger' : (progress > 70 ? 'bg-warning' : 'bg-secondary');
+
+                    grid.innerHTML += `
+                        <div class="bg-card p-6 rounded-2xl border border-slate-800 relative group transition hover:border-slate-600 shadow-lg">
+                            <button onclick="deleteTrip(${trip.id})" class="absolute top-4 right-4 text-slate-600 hover:text-danger opacity-0 group-hover:opacity-100 transition"><i class="fa-solid fa-trash"></i></button>
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-12 h-12 bg-gradient-to-br from-secondary to-purple-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg shadow-secondary/20"><i class="fa-solid fa-map-location"></i></div>
+                                <div><h3 class="font-bold text-white text-lg">${trip.name}</h3><p class="text-xs text-textMuted">Budget: ${formatMoney(trip.budget)}</p></div>
+                            </div>
+                            <div class="mb-2 flex justify-between text-sm"><span class="text-slate-400">Spent: <span class="text-white">${formatMoney(spent)}</span></span><span class="${remaining < 0 ? 'text-danger' : 'text-success'} font-bold">${formatMoney(remaining)} Left</span></div>
+                            <div class="w-full bg-slate-900 h-3 rounded-full overflow-hidden mb-4 border border-slate-700"><div class="${colorClass} h-full transition-all duration-500" style="width: ${Math.min(progress, 100)}%"></div></div>
+                            <button onclick="quickAdd('trip', ${trip.id})" class="w-full py-2 rounded-lg border border-slate-700 text-slate-300 text-sm hover:bg-slate-700 hover:text-white transition flex justify-center items-center gap-2"><i class="fa-solid fa-plus-circle"></i> Add Expense</button>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        function renderSavings() {
+            const grid = document.getElementById('savings-grid');
+            grid.innerHTML = '';
+            
+            if(appData.savings.length === 0) {
+                document.getElementById('no-savings').classList.remove('hidden');
+            } else {
+                document.getElementById('no-savings').classList.add('hidden');
+                appData.savings.forEach(sav => {
+                    const saved = appData.transactions.filter(t => t.saveId == sav.id && t.type === 'expense').reduce((acc, t) => acc + parseFloat(t.amount), 0);
+                    // Note: For savings, usually 'Expense' type is used to move money INTO savings, or we can assume manual add. 
+                    // Let's assume user tracks "Contribution" as expense from wallet, or income to savings. 
+                    // For simplicity in this app: Expense linked to Saving = Added to Saving.
+                    const progress = (saved / sav.target) * 100;
+
+                    grid.innerHTML += `
+                        <div class="bg-card p-6 rounded-2xl border border-slate-800 relative group transition hover:border-slate-600 shadow-lg">
+                            <button onclick="deleteSaving(${sav.id})" class="absolute top-4 right-4 text-slate-600 hover:text-danger opacity-0 group-hover:opacity-100 transition"><i class="fa-solid fa-trash"></i></button>
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-12 h-12 bg-gradient-to-br from-info to-blue-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg shadow-info/20"><i class="fa-solid fa-bullseye"></i></div>
+                                <div><h3 class="font-bold text-white text-lg">${sav.name}</h3><p class="text-xs text-textMuted">Goal: ${formatMoney(sav.target)}</p></div>
+                            </div>
+                            <div class="mb-2 flex justify-between text-sm"><span class="text-slate-400">Saved: <span class="text-success font-bold">${formatMoney(saved)}</span></span><span class="text-slate-500">${Math.round(progress)}%</span></div>
+                            <div class="w-full bg-slate-900 h-3 rounded-full overflow-hidden mb-4 border border-slate-700"><div class="bg-info h-full transition-all duration-500" style="width: ${Math.min(progress, 100)}%"></div></div>
+                            <button onclick="quickAdd('sav', ${sav.id})" class="w-full py-2 rounded-lg border border-slate-700 text-slate-300 text-sm hover:bg-slate-700 hover:text-white transition flex justify-center items-center gap-2"><i class="fa-solid fa-coins"></i> Add Contribution</button>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        // --- ACTIONS ---
+
+        document.getElementById('form-trans').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const type = document.querySelector('input[name="t-type"]:checked').value;
+            const amount = parseFloat(document.getElementById('t-amount').value);
+            const category = document.getElementById('t-category').value;
+            const note = document.getElementById('t-note').value;
+            const linkVal = document.getElementById('t-trip-link').value;
+            const isRecurring = document.getElementById('t-recurring').checked;
+
+            let tripId = null;
+            let saveId = null;
+            
+            if(linkVal.startsWith('trip-')) tripId = parseInt(linkVal.split('-')[1]);
+            if(linkVal.startsWith('sav-')) saveId = parseInt(linkVal.split('-')[1]);
+
+            const newTx = {
+                id: Date.now(),
+                date: new Date().toISOString(),
+                type, amount, category, note, tripId, saveId, isRecurring
+            };
+
+            appData.transactions.push(newTx);
+            saveData();
+            closeModal('transaction');
+            e.target.reset();
+            showToast('Transaction saved successfully!');
+        });
+
+        document.getElementById('form-trip').addEventListener('submit', (e) => {
+            e.preventDefault();
+            appData.trips.push({
+                id: Date.now(),
+                name: document.getElementById('trip-name').value,
+                budget: parseFloat(document.getElementById('trip-budget').value)
+            });
+            saveData();
+            closeModal('trip');
+            e.target.reset();
+            showToast('Trip plan created!');
+        });
+
+        document.getElementById('form-saving').addEventListener('submit', (e) => {
+            e.preventDefault();
+            appData.savings.push({
+                id: Date.now(),
+                name: document.getElementById('save-name').value,
+                target: parseFloat(document.getElementById('save-target').value)
+            });
+            saveData();
+            closeModal('saving');
+            e.target.reset();
+            showToast('Savings goal created!');
+        });
+
+        // Delete & Quick Add
+        function deleteTrans(id) {
+            if(confirm('Delete this transaction?')) {
+                appData.transactions = appData.transactions.filter(t => t.id !== id);
+                saveData();
+                showToast('Transaction deleted.', 'error');
+            }
+        }
+        function deleteTrip(id) {
+            if(confirm('Delete trip? Data remains.')) {
+                appData.trips = appData.trips.filter(t => t.id !== id);
+                saveData();
+                showToast('Trip deleted.', 'error');
+            }
+        }
+        function deleteSaving(id) {
+            if(confirm('Delete goal? Data remains.')) {
+                appData.savings = appData.savings.filter(t => t.id !== id);
+                saveData();
+                showToast('Goal deleted.', 'error');
+            }
+        }
+        function quickAdd(type, id) {
+            openModal('transaction');
+            document.getElementById('t-trip-link').value = `${type}-${id}`;
+        }
+
+        // --- BACKUP & RESTORE ---
+        function exportJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData));
+            const a = document.createElement('a');
+            a.href = dataStr;
+            a.download = `AloneMgt_Backup_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+        }
+
+        function importData() {
+            const fileInput = document.getElementById('import-file');
+            const file = fileInput.files[0];
+            if(!file) { showToast('Please select a JSON file', 'error'); return; }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if(imported.transactions && imported.settings) {
+                        localStorage.setItem('aloneMgtProV2', JSON.stringify(imported));
+                        alert('Data Restored Successfully! App will reload.');
+                        location.reload();
+                    } else {
+                        showToast('Invalid file format', 'error');
+                    }
+                } catch(err) {
+                    showToast('Error parsing file', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function exportData() {
+            let csv = "Date,Type,Category,Amount,Link,Recurring,Note\n";
+            appData.transactions.forEach(t => {
+                let linkName = "";
+                if(t.tripId) linkName = "Trip: " + (appData.trips.find(tr => tr.id == t.tripId)?.name || "");
+                if(t.saveId) linkName = "Save: " + (appData.savings.find(s => s.id == t.saveId)?.name || "");
+                csv += `${new Date(t.date).toLocaleDateString()},${t.type},${t.category},${t.amount},${linkName},${t.isRecurring || false},${t.note}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'AloneMgt_Data.csv';
+            a.click();
+        }
+
+        function clearData() {
+            if(confirm("WARNING: This will delete ALL data locally. Make sure to Backup first!")) {
+                localStorage.removeItem('aloneMgtProV2');
+                location.reload();
+            }
+        }
+
+        // Change PIN Logic (Updated for Base64)
+        document.getElementById('form-change-pin').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const current = document.getElementById('pin-current').value;
+            const newPin = document.getElementById('pin-new').value;
+            const confirmPin = document.getElementById('pin-confirm').value;
+
+            if(btoa(current) !== appData.settings.pin) {
+                showToast('Current PIN is incorrect!', 'error');
+                return;
+            }
+            if(newPin.length < 4 || newPin !== confirmPin) {
+                showToast('Invalid or Mismatching PINs.', 'error');
+                return;
+            }
+            appData.settings.pin = btoa(newPin);
+            saveData();
+            document.getElementById('form-change-pin').reset();
+            showToast('PIN Updated Securely!');
+        });
+
+        // Settings Listeners
+        document.getElementById('set-currency').addEventListener('change', (e) => {
+            appData.settings.currency = e.target.value; saveData();
+        });
+        document.getElementById('set-budget').addEventListener('change', (e) => {
+            appData.settings.budget = e.target.value; saveData();
+        });
+
+        // Modal Helpers
+        function openModal(type) {
+            document.getElementById(`modal-${type}`).classList.remove('hidden');
+            document.getElementById(`modal-${type}`).classList.add('flex');
+            // Reset category logic if needed
+            if(type === 'transaction') renderCategories();
+        }
+        function closeModal(type) {
+            document.getElementById(`modal-${type}`).classList.add('hidden');
+            document.getElementById(`modal-${type}`).classList.remove('flex');
+        }
+
+        // --- REPORTS (UPDATED DATE RANGE) ---
+        let pieInst = null, barInst = null;
+        function updateReports() {
+            const range = document.getElementById('report-range').value;
+            const ctxPie = document.getElementById('chartPie').getContext('2d');
+            const ctxBar = document.getElementById('chartBar').getContext('2d');
+
+            const now = new Date();
+            let filteredTx = appData.transactions.filter(t => {
+                const d = new Date(t.date);
+                if(range === 'this_month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                if(range === 'last_month') return d.getMonth() === now.getMonth() - 1;
+                if(range === 'last_7') {
+                    const past = new Date(); past.setDate(now.getDate() - 7);
+                    return d >= past;
+                }
+                if(range === 'last_3m') {
+                    const past = new Date(); past.setMonth(now.getMonth() - 3);
+                    return d >= past;
+                }
+                return true; 
+            });
+
+            // Pie
+            const cats = {};
+            filteredTx.filter(t => t.type === 'expense').forEach(t => { cats[t.category] = (cats[t.category] || 0) + parseFloat(t.amount); });
+            if(pieInst) pieInst.destroy();
+            pieInst = new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(cats),
+                    datasets: [{ data: Object.values(cats), backgroundColor: ['#3b82f6','#ef4444','#10b981','#f59e0b','#6366f1','#8b5cf6','#ec4899','#14b8a6'], borderWidth: 0 }]
+                },
+                options: { responsive: true, plugins: { legend: { position: 'right', labels: { color: '#94a3b8', font: {family: 'Outfit'} } } } }
+            });
+
+            // Bar
+            const income = filteredTx.filter(t => t.type === 'income').reduce((a, b) => a + parseFloat(b.amount), 0);
+            const expense = filteredTx.filter(t => t.type === 'expense').reduce((a, b) => a + parseFloat(b.amount), 0);
+            if(barInst) barInst.destroy();
+            barInst = new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: ['Income', 'Expense'],
+                    datasets: [{ label: 'Amount', data: [income, expense], backgroundColor: ['#10b981', '#ef4444'], borderRadius: 6, barThickness: 50 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }, x: { ticks: { color: '#94a3b8' }, grid: { display: false } } }, plugins: { legend: { display: false } } }
+            });
+        }
+    </script>
+</body>
+</html>
